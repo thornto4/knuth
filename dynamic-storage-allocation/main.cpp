@@ -1,10 +1,12 @@
 #include <iostream>
 
-using namespace std;
+#include "BuddyAllocator.h"
 
 int main()
 {
-    cout << "Hello World!" << endl;
+    BuddyAllocator buddy(8u); // 2^8 byte buffer
+    buddy.alloc(4);
+    buddy.print();
     return 0;
 }
 
