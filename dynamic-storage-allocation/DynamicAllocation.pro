@@ -3,4 +3,11 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.cpp
+QMAKE_CXXFLAGS += -std=c++11
+
+SOURCES += main.cpp \
+    BuddyAllocator.cpp
+
+HEADERS += \
+    Allocator.h \
+    BuddyAllocator.h
