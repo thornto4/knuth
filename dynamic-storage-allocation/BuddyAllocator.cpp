@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <stdlib.h>
 
 /*
  * MemoryBlock is a doubly linked list representing available free memory regions of size 2^k. This allows for quick traversal of the
@@ -40,6 +41,7 @@ std::ostream &operator<<(std::ostream &out, const MemoryBlock &block ) {
 BuddyAllocator::BuddyAllocator(uint16_t m) :
     m_order(m),
     m_blocks(nullptr),
+    m_buff(nullptr),
     m_details(false)
 {
     if (m > 8) {
@@ -47,7 +49,7 @@ BuddyAllocator::BuddyAllocator(uint16_t m) :
     }
 
     // create buffer of size 2^m
-    m_buff = new char[1 << m];
+    m_buff = (char*) _mm_malloc(1 << m, 1 << m);       // allign our buffer on byte alignments the width of the max block ... should make debugging easier.
     memset(m_buff, 0, 1 << m);
 
     // create lists to store blocks of size 1, 2, 4, 8, ..., 2^m
@@ -76,7 +78,7 @@ BuddyAllocator::BuddyAllocator(uint16_t m) :
 BuddyAllocator::~BuddyAllocator()
 {
     delete [] m_blocks;
-    delete [] m_buff;
+    _mm_free( m_buff );
 }
 
 namespace
