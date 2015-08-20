@@ -1,9 +1,7 @@
 TEMPLATE = app
-CONFIG += console
+CONFIG += console c++14
 CONFIG -= app_bundle
 CONFIG -= qt
-
-QMAKE_CXXFLAGS += -std=c++11
 
 SOURCES += main.cpp \
     BuddyAllocator.cpp
