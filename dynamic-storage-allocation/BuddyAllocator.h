@@ -24,6 +24,8 @@ public:
     void free(char *address) override;
     void print() override;
 
+    void showDetails(bool show) { m_details = show; }
+
 private:
     char *toUserSpace(MemoryBlock *);
     MemoryBlock *fromUserSpace(char *);
@@ -33,6 +35,7 @@ private:
     char * m_buff;
 
     std::map<char*, uint8_t> used;
+    bool m_details;
 };
 
 #endif // BUDDYALLOCATOR

@@ -20,6 +20,15 @@ struct MemoryBlock
     };
 };
 
+std::ostream &operator<<(std::ostream &out, const MemoryBlock &block ) {
+    if (block.available) {
+        out << "MemoryBlock( " << &block << ", " << (1 << block.k) << " )";
+    } else {
+        out << "MemoryBlock( " << &block << ", RESERVED )";
+    }
+    return out;
+}
+
 /*
  * The buddy system relies on the following:
  * - blocks of size 2^k such that 0 <= k <= m
@@ -30,7 +39,8 @@ struct MemoryBlock
 
 BuddyAllocator::BuddyAllocator(uint16_t m) :
     m_order(m),
-    m_blocks(nullptr)
+    m_blocks(nullptr),
+    m_details(false)
 {
     if (m > 8) {
         throw "Insufficient Memory";
@@ -88,6 +98,10 @@ namespace
 }
 char *BuddyAllocator::alloc(uint16_t bytes)
 {
+    if (m_details) {
+        std::cout << "*** Allocating " << bytes << " bytes" << std::endl;
+    }
+
     if (bytes <= 0) {
         throw "Har har har";
     }
@@ -104,6 +118,10 @@ char *BuddyAllocator::alloc(uint16_t bytes)
         ++k;
     }
 
+    if (m_details) {
+        std::cout << "   Searching for free block of size " << (1 << k) << std::endl;
+    }
+
     for (uint8_t j = k; j <= m_order; ++j) {
         // find smallest available block that sufficient for the request
         if (m_blocks[j].next != &m_blocks[j]) {
@@ -112,6 +130,10 @@ char *BuddyAllocator::alloc(uint16_t bytes)
             MemoryBlock *nextBlock = freeBlock->next;
             m_blocks[j].next = nextBlock;
             nextBlock->prev = &m_blocks[j];
+
+            if (m_details) {
+                std::cout << "   Found available block: " <<  *freeBlock << std::endl;
+            }
 
             // do we need to split blocks ?
             while (j != k) {
@@ -123,16 +145,29 @@ char *BuddyAllocator::alloc(uint16_t bytes)
                 nextBlock->k = j;
                 nextBlock->next = nextBlock->prev = &m_blocks[j];
                 m_blocks[j].next = m_blocks[j].prev = nextBlock;
+
+                if (m_details) {
+                    std::cout << "      Split required - Creating smaller block: " << *nextBlock << std::endl;
+                }
             }
 
             // we've found and reserved our block
             char *address = toUserSpace(freeBlock);
             used[address] = freeBlock->k;
+
+            if (m_details) {
+                std::cout << "   Allocation Success - Returning available block: " << *freeBlock << std::endl << std::endl;
+            }
+
             return address;
         }
     }
 
     // there are no known available blocks of sufficient size to meet the request
+
+    if (m_details) {
+        std::cout << "No blocks of size >=" << (1<<k) << "available. Allocation failed." << std::endl;
+    }
 
     throw "Insufficient Memory!";
 }
@@ -142,19 +177,7 @@ void BuddyAllocator::free(char *address)
     std::cout << "deallocating " << address << std::endl;
 }
 
-void BuddyAllocator::print()
-{
-    for (auto iter = used.begin(); iter != used.end(); ++iter) {
-        std::cout << "{ 0x" << (uint32_t)iter->first << ", " << (1 << iter->second) << " }" << std::endl;
-    }
 
-    for (int i = 3; i <= m_order; ++i) {
-        for( MemoryBlock *freeBlock = m_blocks[i].prev; freeBlock != &m_blocks[i]; freeBlock = freeBlock->next ) {
-            std::cout << "|  " << (1 << freeBlock->k) << "  |";
-        }
-    }
-    std::cout << std::endl;
-}
 
 char *BuddyAllocator::toUserSpace(MemoryBlock *block)
 {
@@ -164,4 +187,57 @@ char *BuddyAllocator::toUserSpace(MemoryBlock *block)
 MemoryBlock *BuddyAllocator::fromUserSpace(char *address)
 {
     return (MemoryBlock*)(address - 1);
+}
+
+void BuddyAllocator::print()
+{
+
+    std::cout << "========= Used Memory =======" << std::endl << std::endl;
+    for (auto && pair : used) {
+        std::cout << "{ " << *(pair.first) << " , Data(" << toUserSpace(pair.first) << ") }" << std::endl;
+    }
+    std::cout << std::endl;
+
+    // print available
+
+    // +-----------------------+
+    // | / / / / 16384 / / / / |
+    // +-----------------------+
+
+    // +-----------------------+
+    // |         16384         |
+    // +-----------------------+
+
+
+    std::string leftSegment = "---------";
+    std::string rightSegment= "--------+";
+    std::string leftUnused  = "         ";
+    std::string rightUnused = "        |";
+
+    std::string top, middle, bottom;
+
+    top = bottom = "+";
+    middle = "|";
+
+    for (int i = 3; i <= m_order; ++i) {
+        for (MemoryBlock *block = m_blocks[i].prev; block != &m_blocks[i]; block = block->next) {
+            // print available block
+            std::string blockSize = std::to_string(1 << block->k);
+            std::string segment;
+            segment.append(blockSize.size(), '-');
+            segment = leftSegment + segment + rightSegment;
+
+            top += segment;
+            middle += leftUnused + blockSize + rightUnused;
+            bottom += segment;
+        }
+    }
+
+    std::cout << "========= Available Memory =======" << std::endl;
+    std::cout << std::endl;
+    std::cout << top << std::endl;
+    std::cout << middle << std::endl;
+    std::cout << bottom << std::endl;
+    std::cout << std::endl;
+    std::cout << "============================" << std::endl << std::endl;
 }
