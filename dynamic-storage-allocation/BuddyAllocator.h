@@ -34,7 +34,7 @@ private:
     MemoryBlock *m_blocks;
     char * m_buff;
 
-    std::map<char*, uint8_t> used;
+    std::map<MemoryBlock*, uint8_t> used;
     bool m_details;
 };
 

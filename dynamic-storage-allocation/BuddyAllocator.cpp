@@ -11,7 +11,6 @@
  * */
 struct MemoryBlock
 {
-    MemoryBlock *prev, *next;
     union {
         struct {
             bool available;
@@ -19,6 +18,7 @@ struct MemoryBlock
         };
         struct {} list;
     };
+    MemoryBlock *prev, *next;
 };
 
 std::ostream &operator<<(std::ostream &out, const MemoryBlock &block ) {
@@ -132,6 +132,7 @@ char *BuddyAllocator::alloc(uint16_t bytes)
             MemoryBlock *nextBlock = freeBlock->next;
             m_blocks[j].next = nextBlock;
             nextBlock->prev = &m_blocks[j];
+            freeBlock->available  = 0;
 
             if (m_details) {
                 std::cout << "   Found available block: " <<  *freeBlock << std::endl;
@@ -155,7 +156,7 @@ char *BuddyAllocator::alloc(uint16_t bytes)
 
             // we've found and reserved our block
             char *address = toUserSpace(freeBlock);
-            used[address] = freeBlock->k;
+            used[freeBlock] = j;
 
             if (m_details) {
                 std::cout << "   Allocation Success - Returning available block: " << *freeBlock << std::endl << std::endl;
