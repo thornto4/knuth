@@ -30,6 +30,8 @@ private:
     char *toUserSpace(MemoryBlock *);
     MemoryBlock *fromUserSpace(char *);
 
+    MemoryBlock *getBuddy(MemoryBlock *block, uint8_t k);
+
     uint16_t m_order;
     MemoryBlock *m_blocks;
     char * m_buff;

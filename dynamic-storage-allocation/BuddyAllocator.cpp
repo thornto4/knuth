@@ -144,7 +144,7 @@ char *BuddyAllocator::alloc(uint16_t bytes)
                 --j;
 
                 // if so, split the block and enter the unused half in the available list
-                nextBlock = (MemoryBlock*)((uint32_t)freeBlock ^ (1 << j));
+                nextBlock = getBuddy(freeBlock, j);
                 nextBlock->available = 1;
                 nextBlock->k = j;
                 nextBlock->next = nextBlock->prev = &m_blocks[j];
@@ -191,6 +191,11 @@ char *BuddyAllocator::toUserSpace(MemoryBlock *block)
 MemoryBlock *BuddyAllocator::fromUserSpace(char *address)
 {
     return (MemoryBlock*)(address - 1);
+}
+
+MemoryBlock *BuddyAllocator::getBuddy(MemoryBlock *block, uint8_t k)
+{
+    return (MemoryBlock*)((uintptr_t)block ^ (1<<k));
 }
 
 void BuddyAllocator::print()
