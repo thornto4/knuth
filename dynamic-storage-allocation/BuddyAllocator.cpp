@@ -178,10 +178,66 @@ char *BuddyAllocator::alloc(uint16_t bytes)
 
 void BuddyAllocator::free(char *address)
 {
-    std::cout << "deallocating " << address << std::endl;
+    if (m_details) {
+        std::cout << "*** Freeing memory at address: 0x" << (void*)address << std::endl;
+    }
+    // remove block from used list
+    MemoryBlock *block = fromUserSpace(address);
+    uint8_t k = used[block];
+    used.erase(block);
+
+    if (m_details) {
+        std::cout << "   Located at block: " << *block << std::endl;
+    }
+
+    // is buddy available?
+    MemoryBlock *buddy = getBuddy(block, k);
+
+    // combine buddy if:
+    // 1. we're not at the last block
+    // 2. our buddy is available
+    // 3. our buddy is also the same size we are
+    while (k != m_order && buddy->available == 1 && buddy->k == k) {
+
+        if (m_details) {
+            std::cout << "      Coalescing - Reclaiming additional block: " << *buddy << std::endl;
+        }
+
+        // remove buddy from our free list
+        // 1. point the node behind me, to whatever is in front of me
+        // 2. point the node in front of me, to whatever is behind me
+        buddy->prev->next = buddy->next;
+        buddy->next->prev = buddy->prev;
+
+        // bump up block level
+        ++k;
+
+        if (buddy < block) {
+            block = buddy;
+        }
+
+        buddy = getBuddy(block, k);
+    }
+
+    // add newly reclaimed block to the available list
+    block->available = 1;
+    block->k = k;
+
+    MemoryBlock *nextBlock = m_blocks[k].next;
+    block->next = nextBlock;
+    nextBlock->prev = block;
+
+    block->prev = &m_blocks[k];
+    m_blocks[k].next = block;
+
+    if (m_details) {
+        std::cout << "   Free Success - New block available: " << *block << std::endl << std::endl;
+    }
+
+    // a list of size n looks like the following:
+    // [ Head ] --> [ rear ]<-->[ n - 1]<-- ... -->[ 2 ] [ front ]
+    // [ Head ] --> [ newBlock ]<-->[ n ]<-->[ n - 1]<-- ... -->[ 2 ] [ front ]
 }
-
-
 
 char *BuddyAllocator::toUserSpace(MemoryBlock *block)
 {
