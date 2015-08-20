@@ -114,6 +114,7 @@ char *BuddyAllocator::alloc(uint16_t bytes)
 
     bytes += 1; // must account for our boolean flag
 
+    // find our block size and its index
     uint16_t blockSize = nextPowerOfTwo(bytes);
     uint16_t k = 0;
     while(blockSize >>= 1) {
